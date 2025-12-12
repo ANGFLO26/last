@@ -1,0 +1,126 @@
+" 
+1. Chọn 1 bộ dữ liệu trên Kaggle (nguồn khác cũng được) làm về bài toán học máy.
+
+2. chia dữ liệu thành 2 phần: 1 phần dùng để huấn luyện, 1 phần dùng để streaming về kafka.
+
+3. Dùng Spark ML huấn luyện mô hình sử dụng dữ liệu huấn luyện.
+
+4. viết chương trình mô phỏng streaming để gửi dữ liệu streaming về kafka, Spark đọc dữ liệu này và dự đoán giá trị, sau đó trả vè lại cho Kafka để trực quan hoá.
+
+5. Yêu cầu sử dụng Airflow để điều khiển toàn bộ quá trình từ: khỏi động kafka (docker), chạy spark server, chạy chương trình mô phỏng streaming, submit code xử lý tới Spark (bao gồm code huấn luyện và code dự đoán).
+
+++++++++++++
+
+Nộp bài: báo cáo hoàn chỉnh + slide trình bày + code trên github. 
+
+Chạy demo: yêu cầu tối thiểu sử dụng 3 máy. 1 cho Spark, 1 cho Airflow và 1 cho Kafka. và máy cá nhân dùng để demo (streaming)" 
+
+
+
+
+YÊU CẦU DỰ ÁN (DÀNH CHO CURSOR / DEV ASSISTANT) — KHÔNG CODE, CHỈ MÔ TẢ RÕ RÀNG
+
+Mục tiêu: Hai sinh viên thực hiện một bài tập end-to-end: huấn luyện model bằng Spark ML (batch), mô phỏng dữ liệu streaming gửi vào Kafka, Spark Structured Streaming đọc và dự đoán, và Airflow điều phối toàn bộ. Cuối cùng nộp báo cáo, slide, code trên GitHub và chạy demo với tối thiểu 3 máy (Spark, Airflow, Kafka) + máy cá nhân để demo streaming.
+
+Tổng quan ngắn gọn (1 câu)
+
+Chuỗi bước: Chọn dataset → Tách train/stream → Train model bằng Spark ML → Lưu model → Mô phỏng streaming gửi vào Kafka → Spark Streaming đọc, predict → Ghi kết quả về Kafka → Visualize — mọi bước được Orchestrate bằng Airflow (kể cả start/stop Docker Kafka, start Spark job, chạy simulator).
+
+1 — YÊU CẦU CHI TIẾT THEO BƯỚC (mỗi bước: mục đích, cách thực hiện (miêu tả), đầu ra mong muốn)
+BƯỚC A — Chọn dataset
+
+Mục đích: Có dữ liệu phù hợp cho bài toán ML (regression hoặc classification), kích thước vừa phải để train trên Spark và có thể chia thành phần streaming.
+
+Miêu tả: Chọn 1 dataset từ Kaggle hoặc nguồn khác; nêu tên dataset, link nguồn, dạng bài toán (reg/clf), các trường chính (features + label), kích thước (số dòng, MB).
+
+Đầu ra: dataset_metadata.md (tên dataset, link, explanation), file raw_dataset.csv trong repo.
+
+BƯỚC B — Chuẩn bị & chia dữ liệu
+
+Mục đích: Tách 2 phần: train set (batch) và stream set (records để bơm vào Kafka).
+
+Miêu tả: Chia theo thời gian (nếu có biến thời gian) hoặc ngẫu nhiên nhưng giữ tính hợp lý cho bài toán. Ví dụ 80% train, 20% stream; hoặc dùng các mốc thời gian để stream là bản ghi mới.
+
+Đầu ra: train_data.csv, stream_data.csv; file split_description.md giải thích cách chia và lý do.
+
+BƯỚC C — Huấn luyện model bằng Spark ML (batch)
+
+Mục đích: Huấn luyện model phân tán bằng Spark ML trên train_data.csv.
+
+Miêu tả: Miêu tả pipeline cần: đọc CSV bằng Spark, tiền xử lý (missing, one-hot hoặc index, scaling), feature assembler, train model (vd RandomForest, LogisticRegression hoặc LinearRegression tùy bài toán). Đánh giá cơ bản (train/validation metrics).
+
+Đầu ra: Thông số model & metrics (train_report.md), thư mục chứa model đã lưu (/models/model_v1), file preprocessing_spec.json mô tả mọi transform cần lặp lại khi inference.
+
+BƯỚC D — Mô phỏng streaming (Producer)
+
+Mục đích: Tạo luồng dữ liệu giả lập gửi từng bản ghi từ stream_data.csv tới Kafka input topic.
+
+Miêu tả: Producer đọc stream_data.csv, tuần tự gửi mỗi record theo định dạng JSON, có thể điều chỉnh tốc độ (records/sec). Producer phải đảm bảo schema tương thích với pipeline Spark Streaming.
+
+Đầu ra: Mô tả API/format message (message_schema.json), mô tả tốc độ thử nghiệm (ví dụ 1 r/s, 10 r/s), file simulator_spec.md.
+
+BƯỚC E — Kafka (topics & config)
+
+Mục đích: Trung gian lưu truyền messages.
+
+Miêu tả: Tạo 2 topics: input_stream (producer → spark) và prediction_output (spark → consumer/UI). Nêu cấu hình topic (partitions, replication factor cho demo 1 máy là 1).
+
+Đầu ra: File kafka_spec.md (topic names, config, connection info: bootstrap.servers), hướng dẫn khởi động Kafka bằng Docker.
+
+BƯỚC F — Spark Structured Streaming (inference)
+
+Mục đích: Đọc từ Kafka, parse JSON, áp dụng preprocessing pipeline + model, tạo prediction, gửi kết quả về Kafka output topic.
+
+Miêu tả: Chi tiết flow streaming: read-from-kafka → deserialize → apply preprocessing transforms (phải khớp với preprocessing_spec.json) → model.transform → attach prediction metadata (timestamp, model_version) → write-to-kafka as JSON. Nêu checkpointing path & exactly-once / at-least-once considerations.
+
+Đầu ra: streaming_spec.md mô tả schema in/out, checkpoint location, model load path, expected throughput.
+
+BƯỚC G — Consumer / Visualization
+
+Mục đích: Hiển thị kết quả dự đoán realtime để demo.
+
+Miêu tả: Consumer đọc prediction_output, hiển thị bảng/biểu đồ/timeline; tối thiểu: console prints. Gợi ý: Streamlit/Flask để demo UI.
+
+Đầu ra: viewer_spec.md mô tả cách kết nối Kafka, expected UI features, sample screenshots mockup.
+
+BƯỚC H — Orchestration bằng Airflow
+
+Mục đích: Tự động hóa trình tự toàn bộ pipeline.
+
+Miêu tả: Thiết kế DAGs (mỗi DAG 1 responsibility or a monolithic DAG with tasks). Các task chính:
+
+start_kafka — khởi động Docker Compose Kafka (ZK + broker + UI).
+
+split_dataset — thực hiện bước chia dữ liệu (hoặc chỉ verify files).
+
+train_model — submit Spark batch job để train (chờ hoàn thành).
+
+start_spark_streaming — submit/khởi động Spark streaming job (long running).
+
+start_producer — start simulator (bơm dữ liệu).
+
+start_viewer — launch viewer (tuỳ chọn).
+
+Mô tả retry policy, dependencies, notifications.
+
+Đầu ra: airflow_spec.md (DAG graph, task descriptions, trigger方式, task success criteria).
+
+2 — YÊU CẦU VỀ MÔ TẢ (CHO MỖI TASK) PHẢI CÓ (Template)
+
+Mỗi task mà Cursor giao phải trả lại theo template (KHÔNG CODE):
+
+Tên task:
+
+Mục tiêu: (1–2 câu)
+
+Input: (files/configs/params)
+
+Quy trình thực hiện (miêu tả bước-bước): (mô tả rõ trình tự)
+
+Output (files/artifacts): (đường dẫn file & format)
+
+Tiêu chí chấp nhận / kiểm thử: (how to verify success)
+
+Notes / caveats: (compatibility, performance)
+
+Ví dụ: train_model task phải nêu rõ input train_data.csv, output /models/model_v1, metrics must exceed some baseline or at least produce evaluation report.

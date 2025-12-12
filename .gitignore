@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Airflow
+airflow_machine/logs/
+airflow_machine/airflow.db
+airflow_machine/airflow.cfg
+airflow_machine/.scheduler.pid
+airflow_machine/airflow-webserver.pid
+
+# Spark
+spark_machine/logs/
+*.log
+
+# Kafka
+kafka_machine/data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (large)
+# Uncomment if you don't want to commit data
+# data/*.csv
+
+# Models and checkpoints (large)
+# Uncomment if you don't want to commit
+# spark_machine/models/
+# spark_machine/checkpoints/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
