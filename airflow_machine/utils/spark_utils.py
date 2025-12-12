@@ -16,7 +16,7 @@ def verify_spark_job_running(
     Verify Spark streaming job is running
     
     Args:
-        spark_ui_url: Spark Web UI URL (e.g., "http://spark-machine-ip:8080")
+        spark_ui_url: Spark Web UI URL (e.g., "http://192.168.1.134:8080")
         job_name: Name pattern to search for in job names
         timeout: Maximum time to wait in seconds
         check_interval: Interval between checks in seconds

@@ -26,6 +26,9 @@ def create_spark_session(app_name="FraudDetectionTraining"):
 def load_data(spark, input_path):
     """Load training data from CSV"""
     print(f"Loading data from {input_path}...")
+    # Ensure we use local filesystem (file://) instead of HDFS
+    if not input_path.startswith("file://") and not input_path.startswith("hdfs://"):
+        input_path = f"file://{input_path}"
     df = spark.read \
         .option("header", "true") \
         .option("inferSchema", "true") \
@@ -172,6 +175,9 @@ def evaluate_model(model, test_df):
 def save_model(model, output_path):
     """Save trained model"""
     print(f"Saving model to {output_path}...")
+    # Ensure local filesystem is used
+    if not output_path.startswith("file://") and not output_path.startswith("hdfs://"):
+        output_path = f"file://{output_path}"
     model.write().overwrite().save(output_path)
     print(f"Model saved successfully!")
 
@@ -179,8 +185,14 @@ def save_model(model, output_path):
 def save_metrics(metrics, output_path):
     """Save training metrics to file"""
     import json
-    metrics_path = f"{output_path}/metrics.json"
+    import os
+    # Remove file:// prefix if present for local file operations
+    clean_path = output_path.replace("file://", "")
+    metrics_path = f"{clean_path}/metrics.json"
     print(f"Saving metrics to {metrics_path}...")
+    
+    # Create directory if not exists
+    os.makedirs(clean_path, exist_ok=True)
     
     with open(metrics_path, 'w') as f:
         json.dump(metrics, f, indent=2)

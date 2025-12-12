@@ -14,10 +14,21 @@ cd "$SCRIPT_DIR"
 export AIRFLOW_HOME="$SCRIPT_DIR"
 echo "AIRFLOW_HOME: $AIRFLOW_HOME"
 
+# Activate virtual environment if it exists
+if [ -d "venv" ]; then
+    echo "Activating virtual environment..."
+    source venv/bin/activate
+    echo "Virtual environment activated"
+else
+    echo "Warning: Virtual environment not found. Using system Python."
+    echo "It's recommended to use virtual environment. Run: bash setup_venv.sh"
+fi
+
 # Check if Airflow is installed
 if ! command -v airflow &> /dev/null; then
     echo "Error: Airflow is not installed"
     echo "Please install: pip install -r requirements.txt"
+    echo "Or run: bash setup_venv.sh"
     exit 1
 fi
 
@@ -68,7 +79,12 @@ mkdir -p logs
 
 # Start Airflow Scheduler (background)
 echo "Starting Airflow Scheduler..."
-airflow scheduler > logs/scheduler.log 2>&1 &
+# Ensure we use airflow from venv
+if [ -d "venv" ] && [ -f "venv/bin/airflow" ]; then
+    venv/bin/airflow scheduler > logs/scheduler.log 2>&1 &
+else
+    airflow scheduler > logs/scheduler.log 2>&1 &
+fi
 SCHEDULER_PID=$!
 echo "Scheduler PID: $SCHEDULER_PID"
 echo $SCHEDULER_PID > .scheduler.pid
@@ -81,5 +97,10 @@ echo ""
 echo "Press Ctrl+C to stop Airflow"
 echo ""
 
-airflow webserver -p 8080
+# Ensure we use airflow from venv
+if [ -d "venv" ] && [ -f "venv/bin/airflow" ]; then
+    venv/bin/airflow webserver -p 8080
+else
+    airflow webserver -p 8080
+fi
 

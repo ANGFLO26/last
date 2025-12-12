@@ -174,6 +174,18 @@ cd airflow_machine
 # Cài dependencies
 pip install -r requirements.txt
 
+# ⚠️ QUAN TRỌNG: Cài Spark Client (SparkSubmitOperator cần spark-submit)
+chmod +x install_spark_client.sh
+./install_spark_client.sh
+
+# Sau khi cài, thêm vào ~/.bashrc hoặc ~/.profile:
+# export SPARK_HOME=/opt/spark
+# export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+# source ~/.bashrc
+
+# Verify Spark client
+spark-submit --master spark://192.168.1.134:7077 --version
+
 # Start Airflow
 chmod +x start.sh
 ./start.sh

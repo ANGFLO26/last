@@ -1,7 +1,24 @@
 # Airflow Machine Requirements
+# 
+# IMPORTANT: To avoid dependency conflicts, use a virtual environment!
+# 
+# Setup instructions:
+#   1. Run: bash setup_venv.sh
+#   2. Activate: source venv/bin/activate
+#   3. Install: pip install -r requirements.txt
+#
+# If you must install globally, be aware of conflicts with:
+#   - pydantic (Airflow 2.7.0 needs 1.x, but newer packages need 2.x)
+#   - protobuf (Airflow needs 4.x, but TensorFlow needs 5.x)
+#   - starlette (Airflow needs 0.50.0, but FastAPI needs <0.28.0)
 
 # Core
 apache-airflow==2.7.0
+pendulum==2.1.2  # Airflow 2.7.0 requires pendulum 2.x, not 3.x
+flask-session==0.5.0  # Airflow 2.7.0 requires flask-session 0.5.0, not 0.8.0
+connexion==2.14.2  # Airflow 2.7.0 requires connexion 2.14.2, not 3.x
+WTForms==3.1.2  # Airflow 2.7.0 requires WTForms 3.1.2, not 3.2.x (causes AttributeError)
+apache-airflow-providers-apache-spark==4.1.0  # Spark provider for Airflow 2.7.0
 pyspark>=3.5.0
 
 # Kafka

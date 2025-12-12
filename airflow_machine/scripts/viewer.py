@@ -3,6 +3,7 @@
 Streamlit Viewer App
 Đọc kết quả prediction từ Kafka và hiển thị real-time visualization
 """
+import os
 import streamlit as st
 import pandas as pd
 import json
@@ -29,7 +30,7 @@ st.markdown("---")
 st.sidebar.header("Configuration")
 kafka_bootstrap = st.sidebar.text_input(
     "Kafka Bootstrap Servers",
-    value="kafka-machine-ip:9092",
+    value=os.getenv("KAFKA_BOOTSTRAP", "192.168.1.3:9092"),
     help="Kafka bootstrap servers (host:port)"
 )
 topic = st.sidebar.text_input(
